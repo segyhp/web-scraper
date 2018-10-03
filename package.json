@@ -1,0 +1,27 @@
+{
+  "name": "web-scraper",
+  "version": "1.0.0",
+  "description": "Web scraper using nodeJS",
+  "main": "solution.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/segyhp/web-scraper.git"
+  },
+  "keywords": [
+    "web",
+    "scraper"
+  ],
+  "author": "Segy Hendro Pratama",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/segyhp/web-scraper/issues"
+  },
+  "homepage": "https://github.com/segyhp/web-scraper#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "request": "^2.88.0"
+  }
+}
