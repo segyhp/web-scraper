@@ -21,7 +21,10 @@
   },
   "homepage": "https://github.com/segyhp/web-scraper#readme",
   "dependencies": {
+    "axios": "^0.18.0",
+    "chalk": "^2.4.1",
     "cheerio": "^1.0.0-rc.2",
+    "puppeteer": "^1.8.0",
     "request": "^2.88.0"
   }
 }

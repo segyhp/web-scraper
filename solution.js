@@ -1,69 +1,140 @@
+//Initate library
 const fs = require('fs')
-const request = require('request')
 const cheerio = require('cheerio')
-const writeStream = fs.createWriteStream('post.json')
+const chalk = require ('chalk')
+const puppeteer = require('puppeteer')
 
-//write header
+//Initate constant
+const promoTypeArr  = ["kartu kredit", "ebanking", "simpanan", "others"]
+const promoCategoryArr = ["travel", "lifestyle", "fnb", "gadget_entertainment", "dailyneeds", "others_promo"]
+const url = 'https://www.bankmega.com/promolainnya.php'
+const url_root = "https://www.bankmega.com/"
+const outputFile = 'solution.json';
 
-writeStream.write(`Image link \n`)
-
-let imageArr = []
-
-
-request('https://www.bankmega.com/promolainnya.php', (error, response, html)=> {
-    if(!error && response.statusCode == 200){
-        const $ = cheerio.load(html)
-
-        const promoLain = $('#promolain');
-
-        // console.log(promoLain.html());
-        // console.log(promoLain.text());
-
-        // const output = promoLain.find('a').html();
-    
-        // const output = promoLain.children('li').html();
-        // const output = promoLain.children('li').next().html();
-        // const output = promoLain.children('li').parent().html();
-
-        // $('#promolain li a img').each((i, el) => {
-        //     const item = $(el).html();
-        //     const link = $(el).attr('src')
-
-        //     // console.log(item)
-        //     console.log(link)
-        // })
-
-        // $('#subcatpromo div img').each((i, el) => {
-        //     const item = $(el).html();
-        //     const link = $(el).attr('title')
-
-        //     // console.log(item)
-        //     console.log(link)
-        // })   
-
-        $('#subcatpromo div').each((i, el)=> {
-            // const link = $(el).find('.bg1').html();
-            // const link = $(el).find('.bg1').html().replace(/\s\s+/g, '');
-
-            let url ='https://www.bankmega.com/'
-            const img = $(el).find('img').attr('src')
-
-            let images = {
-                img : url+img
-            }
-
-            imageArr.push(images)
+let resultCount = 0;
+let dataToStored = []
+let type = []
+let category = [];        
+   
+console.log(chalk.yellow.bgBlue(`\n  Scraping of ${chalk.underline.bold(url)} initiated...\n`))
 
 
-            //Write Headers
+
+const scrape = async() => {
+    try {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url);
+    var myDoc = await page.evaluate(() => document.body.innerHTML);
+    var $ = cheerio.load(myDoc);
+    let pageNum = (await page.$$('#contentpromolain2 > div:nth-child(2) > div > table > tbody > tr > td')).length;   
+
+
+let scrapePage = async() => {
+    category = [];
+    //Scrap each page
+    for (let j = 0; j < pageNum - 2; j++) {
+        console.log(chalk.yellow.bgBlue(`\n  Scraping page  ${(j+1)}...\n`))
+        myDoc = await page.evaluate(() => document.body.innerHTML);
+        $ = cheerio.load(myDoc)
+        await page.click(`#contentpromolain2 > div:nth-child(2) > div > table > tbody > tr > td:nth-child(${pageNum}) > a`)
+        await page.waitFor(250);
+        $('#promolain li').map((i, el) => { 
+
+            link = url_root + $(el).find('a').attr('href')
+            title = $(el).find('img').attr('title')
+            img = url_root + $(el).find('img').attr('src')
+            
+            category.push({
+                id: resultCount + 1, link, title, img
+            })
+       
+            resultCount++
 
         })
-        
-        writeStream.write(`${JSON.stringify(imageArr)}\n`)
 
-
-        console.log("Scraping Done..")
+     
 
     }
+      
 }
-)
+//Initate scrap for the first time
+console.log(chalk.yellow.bgBlue(`\n  Scraping type  ${promoTypeArr[0]}...\n`))
+console.log(chalk.yellow.bgBlue(`\n  Scraping category  ${promoCategoryArr[0]}...\n`))
+
+await scrapePage()
+type.push({
+     [promoCategoryArr[0]]: category
+ })
+ dataToStored.push({
+     [promoTypeArr[0]]: type
+ })
+ 
+// Scraping only for the type of 'kartu kredit' because it consists lists of category
+for (let  i =  1 ; i  < promoCategoryArr.length; i++){
+    
+    console.log(chalk.yellow.bgBlue(`\n  Scraping category  ${promoCategoryArr[i]}...\n`))
+    await page.click(`#${promoCategoryArr[(i)]}`)
+    await page.waitFor(250);
+    pageNum = (await page.$$('#contentpromolain2 > div:nth-child(2) > div > table > tbody > tr > td')).length;
+    await page.waitFor(250);
+    await scrapePage();
+
+     type.push({
+         [promoCategoryArr[i]]: category
+     })
+}
+
+// //Scraping the rests of types
+for (let  i =  1 ; i  <promoTypeArr.length ; i++){
+    console.log(chalk.yellow.bgBlue(`\n  Scraping type  ${promoTypeArr[i]}...\n`))
+        await page.click(`#${promoTypeArr[i]}`)
+        await page.waitFor(250);
+        await resultCount++
+        pageNum = (await page.$$('#contentpromolain2 > div:nth-child(2) > div > table > tbody > tr > td')).length;
+        await page.waitFor(250);
+
+        type = [];
+        await scrapePage();
+           type.push({
+               ["Not Available"]: category
+           })
+          dataToStored.push({
+              [promoTypeArr[i]]: type
+          })
+
+
+    }
+    
+
+    //export data to JSON.file
+    exportResults(dataToStored)
+    //Total data parsed
+    console.log(chalk.yellow.bgBlue(`\n  Total count of data scraped :  ${resultCount}\n`))
+    console.log(chalk.yellow.bgBlue(`\n  Program closed`))
+    
+    //Stop the program
+    browser.close();
+
+    }
+
+    catch(err) {
+        console.log(err)
+        browser.close();
+
+    }
+   
+}
+//Call method scrap to run entire program
+scrape();
+//method to return data that scraped as JSON data
+const exportResults = (parsedResults) => {
+    fs.writeFile(outputFile, JSON.stringify(parsedResults, null, 4), (err) => {
+        if (err) {
+            console.log(err)
+        }
+
+        console.log(chalk.yellow.bgBlue(`\n ${chalk.underline.bold(resultCount)} Results exported successfully to ${chalk.underline.bold(outputFile)}\n`))
+    })
+}
+
